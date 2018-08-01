@@ -28,6 +28,9 @@ class Point: public Primitive {
         Point (Vector3, Material*, Material*, float, float, float);
         float intersect (Ray&) {return 0;}
         Vector3 getCenter() {return this->center;}
+        virtual Vector3 getTangentAxis(Vector3) {return Vector3 (0,0,0);}
+        virtual Vector3 getBitangentAxis(Vector3) {return Vector3 (0,0,0);}
+        virtual Vector3 getWorldCoord(Vector3, Vector3) {return this->center;}
 };
 
 class Sphere: public Primitive {

@@ -15,18 +15,24 @@ using namespace std;
 const unsigned int WIDTH = 400;
 const unsigned int HEIGHT = 400;
 const unsigned int MAX_RECURSIONS = 3;
+const float AMBIENT = 0.05;
 const unsigned int SHADOW_SAMPLE_GRID_SIZE = 4;
 const unsigned int LIGHTING_SAMPLE_GRID_SIZE = 3;
 sf::Color BACKGROUND (16,16,16,255);
 
 static sf::Uint8* pixels = new sf::Uint8[WIDTH*HEIGHT*4];
 
-Primitive* objects [] = {new Sphere (Vector3 (30,0,40), 50.0, new Solid(sf::Color(255,255,255,255)), new Texture("scratched.jpg", 1), 0.9, 1.0, 1.0),
-                         new Sphere (Vector3 (-50,-20,25), 30.0, new Solid(sf::Color(0,255,0,255)), new Solid(sf::Color(127,127,127,255)), 0.2, 1.0, 0.4),
-                         new Sphere (Vector3 (-15,-20,-25), 30.0, new Texture("earth.bmp", 1), new Texture("rough.png", 1), 0.0, 0.8, 0.5),
-                         new Plane (Vector3 (0,-50,0), Vector3 (0,1,0), 200, 200, new Solid(sf::Color(255,255,255,255)), new Texture("plate.jpg", 3), 0.7, 1.0, 1.0)};
-Primitive* lights  [] = {new Plane (Vector3 (0, 90, 0), Vector3 (0,-1,0), 100, 100, new Solid(sf::Color(255,255,255,255)), new Solid(sf::Color(127,127,127,255)), 0.0, 0.0, 0.0)};//,
-                         //new Point (Vector3 (50, 20, -200), new Solid(sf::Color(255,255,255,255)), new Solid(sf::Color(127,127,127,255)), 0.0, 0.0, 0.0)};
+Primitive* objects [] = {new Sphere (Vector3 (30,0,40), 50.0, new Solid(sf::Color(255,255,255,255)), new Texture("scratched.jpg", 2), 0.9, 1.0, 1.0),
+                         new Sphere (Vector3 (-50,-20,25), 30.0, new Solid(sf::Color(0,255,0,255)), new Solid(sf::Color(127,127,127,255)), 0.1, 0.8, 0.8),
+                         new Sphere (Vector3 (-15,-20,-25), 30.0, new Texture("earth.bmp", 1), new Texture("rough.png", 2), 0.0, 0.9, 0.5),
+                         new Plane (Vector3 (0,-50,0), Vector3 (0,1,0), 300, 300, new Solid(sf::Color(255,255,255,255)), new Texture("plate.jpg", 6), 0.7, 0.8, 1.0),
+                         new Plane (Vector3 (-150,-50+125,0), Vector3 (1,0,0), 300, 300, new Solid(sf::Color(255,0,0,255)), new Solid(sf::Color(127,127,127,255)), 0.05, 0.5, 0.2),
+                         new Plane (Vector3 (150,-50+125,0), Vector3 (-1,0,0), 300, 300, new Solid(sf::Color(0,255,0,255)), new Solid(sf::Color(127,127,127,255)), 0.05, 0.5, 0.2),
+                         new Plane (Vector3 (0,-50+125,150), Vector3 (0,0,-1), 300, 300, new Solid(sf::Color(0,0,255,255)), new Solid(sf::Color(127,127,127,255)), 0.05, 0.5, 0.2),
+                         new Plane (Vector3 (0,-50+125,-150), Vector3 (0,0,1), 300, 300, new Solid(sf::Color(255,255,0,255)), new Solid(sf::Color(127,127,127,255)), 0.05, 0.5, 0.2)};
+
+Primitive* lights  [] = {new Plane (Vector3 (0, 95, 0), Vector3 (0,-1,0), 150, 150, new Solid(sf::Color(255,255,255,255)), new Solid(sf::Color(127,127,127,255)), 0.0, 0.0, 0.0),
+                         new Sphere (Vector3 (-100, 50, -100), 10.0, new Solid(sf::Color(255,255,255,255)), new Solid(sf::Color(127,127,127,255)), 0.0, 0.0, 0.0)};
 
 Ray rays [WIDTH*HEIGHT];
 sf::Color colors [WIDTH*HEIGHT];
@@ -93,7 +99,7 @@ sf::Color trace (Ray& ray, int recursion_depth) {
         normal = normal.scale(1);
     }
 
-    normal = normal+closest->getTangentAxis(intersect).scale((closest->normalMap->getColor(closest->getSurfCoords(intersect)).r/-255.0)+0.5)+closest->getBitangentAxis(intersect).scale((closest->normalMap->getColor(closest->getSurfCoords(intersect)).g/-255.0)+0.5).scale(0.1);
+    normal = normal+closest->getTangentAxis(intersect).scale(((float)closest->normalMap->getColor(closest->getSurfCoords(intersect)).r/255.0)-0.5).scale(1.0)+closest->getBitangentAxis(intersect).scale(((float)closest->normalMap->getColor(closest->getSurfCoords(intersect)).g/255.0)-0.5).scale(1.0);
 
     float diffuse = 0;
     float specular = 0;
@@ -103,8 +109,10 @@ sf::Color trace (Ray& ray, int recursion_depth) {
             for (unsigned int x = 0; x < LIGHTING_SAMPLE_GRID_SIZE; x += 1){
                 float x2 = ((float)x/(float)LIGHTING_SAMPLE_GRID_SIZE);
                 float y2 = ((float)y/(float)LIGHTING_SAMPLE_GRID_SIZE);
-                x2 += ((float)rand()/(float)RAND_MAX)-0.5;
-                y2 += ((float)rand()/(float)RAND_MAX)-0.5;
+                if (LIGHTING_SAMPLE_GRID_SIZE > 1) {
+                    x2 += ((float)rand()/(float)RAND_MAX)-0.5;
+                    y2 += ((float)rand()/(float)RAND_MAX)-0.5;
+                }
                 diffuse += (l->getWorldCoord(l->getCenter(), Vector3 (x2,y2,0)) - intersect).normalize().dot(normal);
                 specular += (l->getWorldCoord(l->getCenter(), Vector3 (x2,y2,0)) - intersect).normalize().dot(reflect(ray.direction, intersect, normal).direction);
             }
@@ -114,7 +122,7 @@ sf::Color trace (Ray& ray, int recursion_depth) {
     diffuse /= (float)((float)(sizeof(lights)/sizeof(lights[0]))*(float)(LIGHTING_SAMPLE_GRID_SIZE*LIGHTING_SAMPLE_GRID_SIZE));
     specular /= (float)((float)(sizeof(lights)/sizeof(lights[0]))*(float)(LIGHTING_SAMPLE_GRID_SIZE*LIGHTING_SAMPLE_GRID_SIZE));
 
-    if (diffuse < 0) {diffuse = 0;}
+    if (diffuse < AMBIENT) {diffuse = AMBIENT;}
     if (specular < 0) {specular = 0;}
     specular = pow(specular, 40);
 
@@ -125,8 +133,10 @@ sf::Color trace (Ray& ray, int recursion_depth) {
             for (unsigned int x = 0; x < SHADOW_SAMPLE_GRID_SIZE; x += 1){
                 float x2 = ((float)x/(float)SHADOW_SAMPLE_GRID_SIZE);
                 float y2 = ((float)y/(float)SHADOW_SAMPLE_GRID_SIZE);
-                x2 += ((float)rand()/(float)RAND_MAX)-0.5;
-                y2 += ((float)rand()/(float)RAND_MAX)-0.5;
+                if (SHADOW_SAMPLE_GRID_SIZE > 1) {
+                    x2 += ((float)rand()/(float)RAND_MAX)-0.5;
+                    y2 += ((float)rand()/(float)RAND_MAX)-0.5;
+                }
                 Ray shadowRay (intersect+normal.scale(0.001), (l->getWorldCoord(l->getCenter(), Vector3 (x2,y2,0))-intersect).normalize());
                 Intersect obstruction = getFirstIntersect(shadowRay);
                 if (obstruction.distance < (l->getWorldCoord(l->getCenter(), Vector3 (x2,y2,0))-intersect).magnitude()) {
@@ -136,6 +146,8 @@ sf::Color trace (Ray& ray, int recursion_depth) {
         }
     }
     shadowIntensity /= (float)(sizeof(lights)/sizeof(lights[0]));
+
+    if (shadowIntensity > 1.0-AMBIENT) { shadowIntensity = 1.0-AMBIENT; }
 
     sf::Color out = closest->material->getColor(closest->getSurfCoords(intersect));
     out.r = clamp(((out.r*diffuse*closest->kd)+(255*specular*closest->ks))*(1.0-shadowIntensity), 255, 0);
@@ -195,7 +207,7 @@ int main () {
             }
         }
 
-        clock_t time = clock();
+        auto time = omp_get_wtime ();
 
         for(int y = 0; y < HEIGHT; y++) {
             int x;
@@ -208,7 +220,8 @@ int main () {
             }
         }
 
-        printf("%f seconds\n", clock() - time);
+        printf("%f seconds\n", omp_get_wtime() - time);
+        printf("%f FPS\n", 1.0/(omp_get_wtime() - time));
 
         for(int y = 0; y < WIDTH; y++) {
             for(int x = 0; x < HEIGHT; x++) {
