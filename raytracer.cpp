@@ -209,10 +209,11 @@ int main () {
 
         auto time = omp_get_wtime ();
 
-        for(int y = 0; y < HEIGHT; y++) {
+	int y;
+         #pragma omp parallel for private(y)
+        for(y = 0; y < HEIGHT; y++) {
             int x;
             int colors_temp [WIDTH*3];
-            #pragma omp parallel for private(x)
             for (x = 0; x < WIDTH; x++) {
                 int val = ((y*WIDTH)+x);
                 sf::Color c = trace(rays[val], 0);
@@ -233,9 +234,9 @@ int main () {
             }
         }
 
-        texture.update(pixels);
+	texture.update(pixels);
         window.draw(sprite);
-        window.display();
+      	window.display();
 
         frame += 1;
     }
