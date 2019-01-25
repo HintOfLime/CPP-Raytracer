@@ -19,6 +19,6 @@ Texture::Texture (char* filename, float tiling) {
 }
 
 sf::Color Texture::getColor (Vector3 coord) {
-    sf::Color color = this->image.getPixel((unsigned int)(coord.x*this->image.getSize().x*tiling)%this->image.getSize().x, (unsigned int)(coord.y*this->image.getSize().y*tiling)%this->image.getSize().y);
+    sf::Color color = this->image.getPixel((unsigned int)(coord.x*this->image.getSize().x*tiling)%this->image.getSize().x, this->image.getSize().y-((unsigned int)(coord.y*this->image.getSize().y*tiling)%this->image.getSize().y)-1);
     return color;
 }

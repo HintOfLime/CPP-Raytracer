@@ -12,27 +12,33 @@ using namespace std;
 #include "objects.h"
 #include "materials.h"
 
-const unsigned int WIDTH = 400;
-const unsigned int HEIGHT = 400;
+const unsigned int WIDTH = 300;
+const unsigned int HEIGHT = 300;
 const unsigned int MAX_RECURSIONS = 3;
-const float AMBIENT = 0.05;
-const unsigned int SHADOW_SAMPLE_GRID_SIZE = 4;
+const float AMBIENT = 0.2;
+const unsigned int SHADOW_SAMPLE_GRID_SIZE = 3;
 const unsigned int LIGHTING_SAMPLE_GRID_SIZE = 3;
-sf::Color BACKGROUND (16,16,16,255);
+//sf::Color BACKGROUND (24,24,24,255);
 
 static sf::Uint8* pixels = new sf::Uint8[WIDTH*HEIGHT*4];
 
 Primitive* objects [] = {new Sphere (Vector3 (30,0,40), 50.0, new Solid(sf::Color(255,255,255,255)), new Texture("scratched.jpg", 2), 0.9, 1.0, 1.0),
-                         new Sphere (Vector3 (-50,-20,25), 30.0, new Solid(sf::Color(0,255,0,255)), new Solid(sf::Color(127,127,127,255)), 0.1, 0.8, 0.8),
-                         new Sphere (Vector3 (-15,-20,-25), 30.0, new Texture("earth.bmp", 1), new Texture("rough.png", 2), 0.0, 0.9, 0.5),
-                         new Plane (Vector3 (0,-50,0), Vector3 (0,1,0), 300, 300, new Solid(sf::Color(255,255,255,255)), new Texture("plate.jpg", 6), 0.7, 0.8, 1.0),
-                         new Plane (Vector3 (-150,-50+125,0), Vector3 (1,0,0), 300, 300, new Solid(sf::Color(255,0,0,255)), new Solid(sf::Color(127,127,127,255)), 0.05, 0.5, 0.2),
-                         new Plane (Vector3 (150,-50+125,0), Vector3 (-1,0,0), 300, 300, new Solid(sf::Color(0,255,0,255)), new Solid(sf::Color(127,127,127,255)), 0.05, 0.5, 0.2),
-                         new Plane (Vector3 (0,-50+125,150), Vector3 (0,0,-1), 300, 300, new Solid(sf::Color(0,0,255,255)), new Solid(sf::Color(127,127,127,255)), 0.05, 0.5, 0.2),
-                         new Plane (Vector3 (0,-50+125,-150), Vector3 (0,0,1), 300, 300, new Solid(sf::Color(255,255,0,255)), new Solid(sf::Color(127,127,127,255)), 0.05, 0.5, 0.2)};
+                         new Sphere (Vector3 (-47.5,-25,25), 25.0, new Solid(sf::Color(0,255,0,255)), new Solid(sf::Color(127,127,127,255)), 0.05, 0.8, 0.8),
+                         new Sphere (Vector3 (-17.5,-20,-25), 30.0, new Texture("earth.bmp", 1), new Texture("rough.png", 2), 0.0, 1.0, 0.4),
+                         new Plane (Vector3 (0,-50,0), Vector3 (0,1,0), 300, 300, new Solid(sf::Color(255,255,255,255)), new Texture("plate.jpg", 6), 0.8, 0.7, 0.9)//,
+                         //new Plane (Vector3 (0,100,0), Vector3 (0,-1,0), 300, 300, new Solid(sf::Color(255,255,255,255)), new Texture("rough.png", 6), 0.0, 0.8, 0.2),
+                         //new Plane (Vector3 (-150,-50+125,0), Vector3 (1,0,0), 300, 300, new Solid(sf::Color(255,0,0,255)), new Solid(sf::Color(127,127,127,255)), 0.05, 0.5, 0.2),
+                         //new Plane (Vector3 (150,-50+125,0), Vector3 (-1,0,0), 300, 300, new Solid(sf::Color(0,255,0,255)), new Solid(sf::Color(127,127,127,255)), 0.05, 0.5, 0.2),
+                         //new Plane (Vector3 (0,-50+125,150), Vector3 (0,0,-1), 300, 300, new Solid(sf::Color(0,0,255,255)), new Solid(sf::Color(127,127,127,255)), 0.05, 0.5, 0.2),
+                         //new Plane (Vector3 (0,-50+125,-150), Vector3 (0,0,1), 300, 300, new Solid(sf::Color(255,255,0,255)), new Solid(sf::Color(127,127,127,255)), 0.05, 0.5, 0.2)
+                        };
 
-Primitive* lights  [] = {new Plane (Vector3 (0, 95, 0), Vector3 (0,-1,0), 150, 150, new Solid(sf::Color(255,255,255,255)), new Solid(sf::Color(127,127,127,255)), 0.0, 0.0, 0.0),
-                         new Sphere (Vector3 (-100, 50, -100), 10.0, new Solid(sf::Color(255,255,255,255)), new Solid(sf::Color(127,127,127,255)), 0.0, 0.0, 0.0)};
+Primitive* lights  [] = {new Plane (Vector3 (0, 95, 0), Vector3 (0,-1,0), 175, 175, new Solid(sf::Color(255,255,255,255)), new Solid(sf::Color(127,127,127,255)), 0.0, 0.0, 0.0),
+                         new Plane (Vector3 (80, 30, -80), Vector3 (-1,-0.5,1), 50, 50, new Solid(sf::Color(255,255,255,255)), new Solid(sf::Color(127,127,127,255)), 0.0, 0.0, 0.0)
+                         //new Sphere (Vector3 (-100, 50, -100), 20.0, new Solid(sf::Color(255,255,255,255)), new Solid(sf::Color(127,127,127,255)), 0.0, 0.0, 0.0)
+                        };
+
+Material* skybox = new Texture("skybox.jpg", 1);
 
 Ray rays [WIDTH*HEIGHT];
 sf::Color colors [WIDTH*HEIGHT];
@@ -52,6 +58,13 @@ Ray reflect (Vector3 incident, Vector3 intersect, Vector3 normal) {
 float clamp (float x, float upper, float lower)
 {
     return min(upper, max(x, lower));
+}
+
+sf::Color clamp (sf::Color color) {
+    color.r = clamp(color.r, 255, 0);
+    color.g = clamp(color.g, 255, 0);
+    color.b = clamp(color.b, 255, 0);
+    return color;
 }
 
 struct Intersect {
@@ -77,6 +90,13 @@ Intersect getFirstIntersect (Ray ray) {
     return i;
 }
 
+sf::Color getSkybox (Vector3 direction) {
+    direction = direction.normalize();
+    float x = (atan2(direction.z, direction.x) / (2*M_PI))+0.5;
+    float y = 1.0 - (acos(direction.y/1.0) / M_PI);
+    return skybox->getColor(Vector3(-x,y,0));
+}
+
 sf::Color trace (Ray& ray, int recursion_depth) {
     Intersect first = getFirstIntersect(ray);
     double distance = first.distance;
@@ -88,7 +108,8 @@ sf::Color trace (Ray& ray, int recursion_depth) {
     }
 
     if (distance >= numeric_limits<double>::infinity()) {
-        return BACKGROUND;
+        return getSkybox(ray.direction);
+        //return BACKGROUND;
     }
 
     Vector3 scaled = ray.direction.normalize().scale(distance);
@@ -110,6 +131,7 @@ sf::Color trace (Ray& ray, int recursion_depth) {
                 float x2 = ((float)x/(float)LIGHTING_SAMPLE_GRID_SIZE);
                 float y2 = ((float)y/(float)LIGHTING_SAMPLE_GRID_SIZE);
                 if (LIGHTING_SAMPLE_GRID_SIZE > 1) {
+                    // Maybe this should be done regularly not randomly
                     x2 += ((float)rand()/(float)RAND_MAX)-0.5;
                     y2 += ((float)rand()/(float)RAND_MAX)-0.5;
                 }
@@ -119,11 +141,13 @@ sf::Color trace (Ray& ray, int recursion_depth) {
         }
     }
 
-    diffuse /= (float)((float)(sizeof(lights)/sizeof(lights[0]))*(float)(LIGHTING_SAMPLE_GRID_SIZE*LIGHTING_SAMPLE_GRID_SIZE));
-    specular /= (float)((float)(sizeof(lights)/sizeof(lights[0]))*(float)(LIGHTING_SAMPLE_GRID_SIZE*LIGHTING_SAMPLE_GRID_SIZE));
+    diffuse /= (float)(LIGHTING_SAMPLE_GRID_SIZE*LIGHTING_SAMPLE_GRID_SIZE);
+    specular /= (float)(LIGHTING_SAMPLE_GRID_SIZE*LIGHTING_SAMPLE_GRID_SIZE);
+
+    diffuse = clamp(diffuse, 1.0, 0.0);
+    specular = clamp(specular, 1.0, 0.0);
 
     if (diffuse < AMBIENT) {diffuse = AMBIENT;}
-    if (specular < 0) {specular = 0;}
     specular = pow(specular, 40);
 
     float shadowIntensity = 0;
@@ -150,21 +174,24 @@ sf::Color trace (Ray& ray, int recursion_depth) {
     if (shadowIntensity > 1.0-AMBIENT) { shadowIntensity = 1.0-AMBIENT; }
 
     sf::Color out = closest->material->getColor(closest->getSurfCoords(intersect));
-    out.r = clamp(((out.r*diffuse*closest->kd)+(255*specular*closest->ks))*(1.0-shadowIntensity), 255, 0);
-    out.g = clamp(((out.g*diffuse*closest->kd)+(255*specular*closest->ks))*(1.0-shadowIntensity), 255, 0);
-    out.b = clamp(((out.b*diffuse*closest->kd)+(255*specular*closest->ks))*(1.0-shadowIntensity), 255, 0);
+    out.r = ((out.r*diffuse*closest->kd)+(255*specular*closest->ks))*(1.0-shadowIntensity);
+    out.g = ((out.g*diffuse*closest->kd)+(255*specular*closest->ks))*(1.0-shadowIntensity);
+    out.b = ((out.b*diffuse*closest->kd)+(255*specular*closest->ks))*(1.0-shadowIntensity);
+    clamp(out);
 
     if ((recursion_depth+1 < MAX_RECURSIONS) and (closest->reflectivity > 0)) {
         Ray reflection = reflect(ray.direction, intersect, normal);
         sf::Color reflected_color;
         reflected_color = trace(reflection, recursion_depth+1);
-        out.r = clamp((out.r*(1.0-closest->reflectivity))+(reflected_color.r*closest->reflectivity*(1.0-shadowIntensity)), 255, 0);
-        out.g = clamp((out.g*(1.0-closest->reflectivity))+(reflected_color.g*closest->reflectivity*(1.0-shadowIntensity)), 255, 0);
-        out.b = clamp((out.b*(1.0-closest->reflectivity))+(reflected_color.b*closest->reflectivity*(1.0-shadowIntensity)), 255, 0);
+        out.r = (out.r*(1.0-closest->reflectivity))+(reflected_color.r*closest->reflectivity*(1.0-shadowIntensity));
+        out.g = (out.g*(1.0-closest->reflectivity))+(reflected_color.g*closest->reflectivity*(1.0-shadowIntensity));
+        out.b = (out.b*(1.0-closest->reflectivity))+(reflected_color.b*closest->reflectivity*(1.0-shadowIntensity));
+        clamp(out);
     } else {
-        out.r = clamp((out.r*(1.0-closest->reflectivity)), 255, 0);
-        out.g = clamp((out.g*(1.0-closest->reflectivity)), 255, 0);
-        out.b = clamp((out.b*(1.0-closest->reflectivity)), 255, 0);
+        out.r = (out.r*(1.0-closest->reflectivity));
+        out.g = (out.g*(1.0-closest->reflectivity));
+        out.b = (out.b*(1.0-closest->reflectivity));
+        clamp(out);
     }
 
     return out;
@@ -181,6 +208,8 @@ int main () {
     omp_set_num_threads(4);
     #endif
 
+    float aspectRatio = (float)WIDTH/(float)HEIGHT;
+
     int frame = 0;
     while (window.isOpen())
     {
@@ -192,14 +221,15 @@ int main () {
         }
 
         window.clear(sf::Color::Black);
+        sprite.setScale(window.getView().getSize().x / sprite.getLocalBounds().width, window.getView().getSize().y / sprite.getLocalBounds().height);
 
         float theta = frame*((2.0*M_PI)/400.0);
         Vector3 cameraRot (0,-theta,0);
         Vector3 cameraPos (150.0*sin(theta), 0.0, 150.0*-cos(theta));
 
-        for(int y = 0; y < WIDTH; y++) {
-            for(int x = 0; x < HEIGHT; x++) {
-                    Vector3 direction = Vector3(((float)x/(float)WIDTH)-0.5, ((float)-y/(float)HEIGHT)+0.5, 1.0);
+        for(int y = 0; y < HEIGHT; y++) {
+            for(int x = 0; x < WIDTH; x++) {
+                    Vector3 direction = Vector3(aspectRatio*(((float)x/(float)WIDTH)-0.5), ((float)-y/(float)HEIGHT)+0.5, 1.0);
                     direction = direction.rotate(cameraRot);
                     Ray ray (cameraPos, direction);
                     int val = ((y*WIDTH)+x);
@@ -207,10 +237,12 @@ int main () {
             }
         }
 
+        #ifdef _OPENMP
         auto time = omp_get_wtime ();
+        #endif
 
-	int y;
-         #pragma omp parallel for private(y)
+	    int y;
+        #pragma omp parallel for private(y)
         for(y = 0; y < HEIGHT; y++) {
             int x;
             int colors_temp [WIDTH*3];
@@ -221,11 +253,13 @@ int main () {
             }
         }
 
+        #ifdef _OPENMP
         printf("%f seconds\n", omp_get_wtime() - time);
         printf("%f FPS\n", 1.0/(omp_get_wtime() - time));
+        #endif
 
-        for(int y = 0; y < WIDTH; y++) {
-            for(int x = 0; x < HEIGHT; x++) {
+        for(int y = 0; y < HEIGHT; y++) {
+            for(int x = 0; x < WIDTH; x++) {
                 int val = ((y*WIDTH)+x);
                 pixels[(val*4)+0] = colors[val].r;
                 pixels[(val*4)+1] = colors[val].g;
@@ -234,7 +268,7 @@ int main () {
             }
         }
 
-	texture.update(pixels);
+	    texture.update(pixels);
         window.draw(sprite);
       	window.display();
 
