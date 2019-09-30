@@ -5,23 +5,25 @@ using namespace std;
 
 #include "objects.h"
 
-void Primitive::init (Material* material, Material* normalMap, float reflectivity, float kd, float ks) {
+void Primitive::init (Material* material, Material* normalMap, float reflectivity, float kd, float ks, float kt, float kr) {
     this->material = material;
     this->normalMap = normalMap;
     this->reflectivity = reflectivity;
-    this->kd = kd;
-    this->ks = ks;
+    this->kd = kd; // Diffuse
+    this->ks = ks; // Specular
+    this->kt = kt; // Transparency
+    this->kr = kr; // Refractive Index
 }
 
-Point::Point (Vector3 center, Material* material, Material* normalMap, float reflectivity, float kd, float ks) {
+Point::Point (Vector3 center, Material* material, Material* normalMap, float reflectivity, float kd, float ks, float kt, float kr) {
     this->center = center;
-    this->init(material, normalMap, reflectivity, kd, ks);
+    this->init(material, normalMap, reflectivity, kd, ks, kt, kr);
 }
 
-Sphere::Sphere (Vector3 center, float radius, Material* material, Material* normalMap, float reflectivity, float kd, float ks) {
+Sphere::Sphere (Vector3 center, float radius, Material* material, Material* normalMap, float reflectivity, float kd, float ks, float kt, float kr) {
     this->center = center;
     this->radius = radius;
-    this->init(material, normalMap, reflectivity, kd, ks);
+    this->init(material, normalMap, reflectivity, kd, ks, kt, kr);
 }
 
 float Sphere::intersect (Ray& ray) {
@@ -78,12 +80,12 @@ Vector3 Sphere::getWorldCoord(Vector3 intersect, Vector3 offsetCoord) {
     return intersect + this->getTangentAxis(intersect).scale(offsetCoord.x) + this->getBitangentAxis(intersect).scale(offsetCoord.y);
 }
 
-Plane::Plane (Vector3 center, Vector3 normal, float width, float height, Material* material, Material* normalMap, float reflectivity, float kd, float ks) {
+Plane::Plane (Vector3 center, Vector3 normal, float width, float height, Material* material, Material* normalMap, float reflectivity, float kd, float ks, float kt, float kr) {
     this->center = center;
     this->normal = normal;
     this->width = width;
     this->height = height;
-    this->init(material, normalMap, reflectivity, kd, ks);
+    this->init(material, normalMap, reflectivity, kd, ks, kt, kr);
 }
 
 float Plane::intersect (Ray& ray) {

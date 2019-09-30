@@ -14,31 +14,32 @@ using namespace std;
 
 const unsigned int WIDTH = 300;
 const unsigned int HEIGHT = 300;
-const unsigned int MAX_RECURSIONS = 3;
-const float AMBIENT = 0.2;
+const unsigned int MAX_RECURSIONS = 5;
+const float AMBIENT = 0.1;
 const unsigned int SHADOW_SAMPLE_GRID_SIZE = 3;
 const unsigned int LIGHTING_SAMPLE_GRID_SIZE = 3;
+const float BIAS = 0.01;
 //sf::Color BACKGROUND (24,24,24,255);
 
 static sf::Uint8* pixels = new sf::Uint8[WIDTH*HEIGHT*4];
 
-Primitive* objects [] = {new Sphere (Vector3 (30,0,40), 50.0, new Solid(sf::Color(255,255,255,255)), new Texture("scratched.jpg", 2), 0.9, 1.0, 1.0),
-                         new Sphere (Vector3 (-47.5,-25,25), 25.0, new Solid(sf::Color(0,255,0,255)), new Solid(sf::Color(127,127,127,255)), 0.05, 0.8, 0.8),
-                         new Sphere (Vector3 (-17.5,-20,-25), 30.0, new Texture("earth.bmp", 1), new Texture("rough.png", 2), 0.0, 1.0, 0.4),
-                         new Plane (Vector3 (0,-50,0), Vector3 (0,1,0), 300, 300, new Solid(sf::Color(255,255,255,255)), new Texture("plate.jpg", 6), 0.8, 0.7, 0.9)//,
-                         //new Plane (Vector3 (0,100,0), Vector3 (0,-1,0), 300, 300, new Solid(sf::Color(255,255,255,255)), new Texture("rough.png", 6), 0.0, 0.8, 0.2),
-                         //new Plane (Vector3 (-150,-50+125,0), Vector3 (1,0,0), 300, 300, new Solid(sf::Color(255,0,0,255)), new Solid(sf::Color(127,127,127,255)), 0.05, 0.5, 0.2),
-                         //new Plane (Vector3 (150,-50+125,0), Vector3 (-1,0,0), 300, 300, new Solid(sf::Color(0,255,0,255)), new Solid(sf::Color(127,127,127,255)), 0.05, 0.5, 0.2),
-                         //new Plane (Vector3 (0,-50+125,150), Vector3 (0,0,-1), 300, 300, new Solid(sf::Color(0,0,255,255)), new Solid(sf::Color(127,127,127,255)), 0.05, 0.5, 0.2),
-                         //new Plane (Vector3 (0,-50+125,-150), Vector3 (0,0,1), 300, 300, new Solid(sf::Color(255,255,0,255)), new Solid(sf::Color(127,127,127,255)), 0.05, 0.5, 0.2)
+Primitive* objects [] = {new Sphere (Vector3 (30,0,40), 50.0, new Solid(sf::Color(255,255,255,255)), new Texture("scratched.jpg", 2), 0.9, 1.0, 1.0, 0, 1.0),
+                         new Sphere (Vector3 (-47.5,-25,25), 25.0, new Texture("earth.bmp", 1), new Texture("rough.png", 2), 0.0, 1.0, 0.4, 0.0, 1.0),
+                         new Sphere (Vector3 (-17.5,-20,-25), 30.0, new Solid(sf::Color(255,255,255,255)), new Solid(sf::Color(127,127,127,255)), 0.0, 1.0, 0.6, 1.0, 0.9),
+                         new Plane (Vector3 (0,-50,0), Vector3 (0,1,0), 300, 300, new Solid(sf::Color(255,255,255,255)), new Texture("plate.jpg", 6), 0.8, 0.7, 0.9, 0.0, 1.0)//,
+                         //new Plane (Vector3 (0,100,0), Vector3 (0,-1,0), 300, 300, new Solid(sf::Color(255,255,255,255)), new Texture("rough.png", 6), 0.0, 0.8, 0.2, 0.0, 0.0),
+                         //new Plane (Vector3 (-150,-50+125,0), Vector3 (1,0,0), 300, 300, new Solid(sf::Color(255,0,0,255)), new Solid(sf::Color(127,127,127,255)), 0.05, 0.5, 0.2, 0.0, 0.0),
+                         //new Plane (Vector3 (150,-50+125,0), Vector3 (-1,0,0), 300, 300, new Solid(sf::Color(0,255,0,255)), new Solid(sf::Color(127,127,127,255)), 0.05, 0.5, 0.2, 0.0, 0.0),
+                         //new Plane (Vector3 (0,-50+125,150), Vector3 (0,0,-1), 300, 300, new Solid(sf::Color(0,0,255,255)), new Solid(sf::Color(127,127,127,255)), 0.05, 0.5, 0.2, 0.0, 0.0),
+                         //new Plane (Vector3 (0,-50+125,-150), Vector3 (0,0,1), 300, 300, new Solid(sf::Color(255,255,0,255)), new Solid(sf::Color(127,127,127,255)), 0.05, 0.5, 0.2, 0.0, 0.0)
                         };
 
-Primitive* lights  [] = {new Plane (Vector3 (0, 95, 0), Vector3 (0,-1,0), 175, 175, new Solid(sf::Color(255,255,255,255)), new Solid(sf::Color(127,127,127,255)), 0.0, 0.0, 0.0),
-                         new Plane (Vector3 (80, 30, -80), Vector3 (-1,-0.5,1), 50, 50, new Solid(sf::Color(255,255,255,255)), new Solid(sf::Color(127,127,127,255)), 0.0, 0.0, 0.0)
-                         //new Sphere (Vector3 (-100, 50, -100), 20.0, new Solid(sf::Color(255,255,255,255)), new Solid(sf::Color(127,127,127,255)), 0.0, 0.0, 0.0)
+Primitive* lights  [] = {new Plane (Vector3 (0, 95, 0), Vector3 (0,-1,0), 175, 175, new Solid(sf::Color(255,255,255,255)), new Solid(sf::Color(127,127,127,255)), 0.0, 0.0, 0.0, 0.0, 0.0),
+                         new Plane (Vector3 (80, 30, -80), Vector3 (-1,-0.5,1), 50, 50, new Solid(sf::Color(255,255,255,255)), new Solid(sf::Color(127,127,127,255)), 0.0, 0.0, 0.0, 0.0, 0.0)
+                         //new Sphere (Vector3 (-100, 50, -100), 20.0, new Solid(sf::Color(255,255,255,255)), new Solid(sf::Color(127,127,127,255)), 0.0, 0.0, 0.0, 0.0, 0.0)
                         };
 
-Material* skybox = new Texture("skybox.jpg", 1);
+Material* skybox = new Texture("skybox.png", 1);
 
 Ray rays [WIDTH*HEIGHT];
 sf::Color colors [WIDTH*HEIGHT];
@@ -48,15 +49,36 @@ Ray reflect (Vector3 incident, Vector3 intersect, Vector3 normal) {
     normal = normal.normalize();
 
     Vector3 reflected = incident - normal.scale(2.0*normal.dot(incident));
-    Vector3 origin = intersect + reflected.scale(0.001);
+    Vector3 origin = intersect + reflected.scale(BIAS);
 
     Ray out (origin, reflected.normalize());
 
     return out;
 }
 
-float clamp (float x, float upper, float lower)
-{
+Ray refract(Vector3 incident, Vector3 intersect, Vector3 normal, float refractiveIndex) {
+    Vector3 refNorm = normal;
+    float n1 = 1.0;
+    float n2 = refractiveIndex;
+    float idn = incident.dot(normal);
+    if (idn < 0.0) {
+        idn = -idn;
+    } else {
+        //normal = normal.scale(-1.0);
+        //n1 = refractiveIndex;
+        //n2 = 1.0;
+    }
+    float n = n2/n1;
+    float k = 1.0 - (pow(n, 2) * (1.0-pow(idn, 2))); 
+
+    if (k < 0.0) { return reflect(incident, intersect, normal); }
+    Vector3 direction = ((incident + refNorm.scale(idn)).scale(n) - refNorm.scale(sqrt(k))).normalize();
+    Ray out = Ray(intersect+direction.scale(BIAS), direction);
+
+    return out;
+}
+
+float clamp (float x, float upper, float lower) {
     return min(upper, max(x, lower));
 }
 
@@ -132,8 +154,8 @@ sf::Color trace (Ray& ray, int recursion_depth) {
                 float y2 = ((float)y/(float)LIGHTING_SAMPLE_GRID_SIZE);
                 if (LIGHTING_SAMPLE_GRID_SIZE > 1) {
                     // Maybe this should be done regularly not randomly
-                    x2 += ((float)rand()/(float)RAND_MAX)-0.5;
-                    y2 += ((float)rand()/(float)RAND_MAX)-0.5;
+                    //x2 += ((float)rand()/(float)RAND_MAX)-0.5;
+                    //y2 += ((float)rand()/(float)RAND_MAX)-0.5;
                 }
                 diffuse += (l->getWorldCoord(l->getCenter(), Vector3 (x2,y2,0)) - intersect).normalize().dot(normal);
                 specular += (l->getWorldCoord(l->getCenter(), Vector3 (x2,y2,0)) - intersect).normalize().dot(reflect(ray.direction, intersect, normal).direction);
@@ -174,26 +196,42 @@ sf::Color trace (Ray& ray, int recursion_depth) {
     if (shadowIntensity > 1.0-AMBIENT) { shadowIntensity = 1.0-AMBIENT; }
 
     sf::Color out = closest->material->getColor(closest->getSurfCoords(intersect));
-    out.r = ((out.r*diffuse*closest->kd)+(255*specular*closest->ks))*(1.0-shadowIntensity);
-    out.g = ((out.g*diffuse*closest->kd)+(255*specular*closest->ks))*(1.0-shadowIntensity);
-    out.b = ((out.b*diffuse*closest->kd)+(255*specular*closest->ks))*(1.0-shadowIntensity);
+    out.r = ((out.r*diffuse*closest->kd)+(255*specular*closest->ks));
+    out.g = ((out.g*diffuse*closest->kd)+(255*specular*closest->ks));
+    out.b = ((out.b*diffuse*closest->kd)+(255*specular*closest->ks));
     clamp(out);
 
-    if ((recursion_depth+1 < MAX_RECURSIONS) and (closest->reflectivity > 0)) {
+    if ((recursion_depth+1 < MAX_RECURSIONS) and (closest->kt < 1.0) and (closest->reflectivity > 0.0)) {
         Ray reflection = reflect(ray.direction, intersect, normal);
         sf::Color reflected_color;
         reflected_color = trace(reflection, recursion_depth+1);
-        out.r = (out.r*(1.0-closest->reflectivity))+(reflected_color.r*closest->reflectivity*(1.0-shadowIntensity));
-        out.g = (out.g*(1.0-closest->reflectivity))+(reflected_color.g*closest->reflectivity*(1.0-shadowIntensity));
-        out.b = (out.b*(1.0-closest->reflectivity))+(reflected_color.b*closest->reflectivity*(1.0-shadowIntensity));
-        clamp(out);
+        out.r = (out.r*(1.0-closest->reflectivity))+(reflected_color.r*closest->reflectivity);
+        out.g = (out.g*(1.0-closest->reflectivity))+(reflected_color.g*closest->reflectivity);
+        out.b = (out.b*(1.0-closest->reflectivity))+(reflected_color.b*closest->reflectivity);
     } else {
         out.r = (out.r*(1.0-closest->reflectivity));
         out.g = (out.g*(1.0-closest->reflectivity));
         out.b = (out.b*(1.0-closest->reflectivity));
-        clamp(out);
     }
 
+    if ((recursion_depth+1 < MAX_RECURSIONS) and (closest->kt > 0.0)) {
+        Ray refracted = refract(ray.direction, intersect, normal, closest->kr);
+        Vector3 exitPoint = intersect + refracted.direction.normalize().scale(getFirstIntersect(refracted).distance);
+        refracted = refract(refracted.direction, exitPoint, closest->getNormal(exitPoint).normalize(), 1.0/closest->kr);
+        sf::Color refracted_color;
+        refracted_color = trace(refracted, recursion_depth+1);
+        out.r = (out.r*(1.0-closest->kt))+(refracted_color.r*closest->kt);
+        out.g = (out.g*(1.0-closest->kt))+(refracted_color.g*closest->kt);
+        out.b = (out.b*(1.0-closest->kt))+(refracted_color.b*closest->kt);
+    } else {
+        out.r = (out.r*(1.0-closest->kt));
+        out.g = (out.g*(1.0-closest->kt));
+        out.b = (out.b*(1.0-closest->kt));
+    }
+
+    out.r = (out.r*(1.0-shadowIntensity));
+    out.g = (out.g*(1.0-shadowIntensity));
+    out.b = (out.b*(1.0-shadowIntensity));
     return out;
 }
 
