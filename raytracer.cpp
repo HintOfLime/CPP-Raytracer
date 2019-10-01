@@ -24,9 +24,9 @@ const float BIAS = 0.01;
 static sf::Uint8* pixels = new sf::Uint8[WIDTH*HEIGHT*4];
 
 Primitive* objects [] = {new Sphere (Vector3 (30,0,40), 50.0, new Solid(sf::Color(255,255,255,255)), new Texture("scratched.jpg", 2), 0.9, 1.0, 1.0, 0, 1.0),
-                         new Sphere (Vector3 (-47.5,-25,25), 25.0, new Texture("earth.bmp", 1), new Texture("rough.png", 2), 0.0, 1.0, 0.4, 0.0, 1.0),
-                         new Sphere (Vector3 (-17.5,-20,-25), 30.0, new Solid(sf::Color(255,255,255,255)), new Solid(sf::Color(127,127,127,255)), 0.0, 1.0, 0.6, 1.0, 0.9),
-                         new Plane (Vector3 (0,-50,0), Vector3 (0,1,0), 300, 300, new Solid(sf::Color(255,255,255,255)), new Texture("plate.jpg", 6), 0.8, 0.7, 0.9, 0.0, 1.0)//,
+                         new Sphere (Vector3 (-15,-25,-22.5), 25.0, new Solid(sf::Color(255,255,255,255)), new Solid(sf::Color(127,127,127,255)), 0.0, 1.0, 0.6, 1.0, 0.9),
+                         new Sphere (Vector3 (-50,-20,20), 30.0, new Texture("earth.bmp", 1), new Texture("rough.png", 2), 0.0, 1.0, 0.4, 0.0, 1.0),
+                         new Plane (Vector3 (0,-50,0), Vector3 (0,1,0), 300, 300, new Solid(sf::Color(255,255,255,255)), new Texture("plate.jpg", 6), 0.6, 0.7, 0.9, 0.0, 1.0)//,
                          //new Plane (Vector3 (0,100,0), Vector3 (0,-1,0), 300, 300, new Solid(sf::Color(255,255,255,255)), new Texture("rough.png", 6), 0.0, 0.8, 0.2, 0.0, 0.0),
                          //new Plane (Vector3 (-150,-50+125,0), Vector3 (1,0,0), 300, 300, new Solid(sf::Color(255,0,0,255)), new Solid(sf::Color(127,127,127,255)), 0.05, 0.5, 0.2, 0.0, 0.0),
                          //new Plane (Vector3 (150,-50+125,0), Vector3 (-1,0,0), 300, 300, new Solid(sf::Color(0,255,0,255)), new Solid(sf::Color(127,127,127,255)), 0.05, 0.5, 0.2, 0.0, 0.0),
@@ -152,11 +152,8 @@ sf::Color trace (Ray& ray, int recursion_depth) {
             for (unsigned int x = 0; x < LIGHTING_SAMPLE_GRID_SIZE; x += 1){
                 float x2 = ((float)x/(float)LIGHTING_SAMPLE_GRID_SIZE);
                 float y2 = ((float)y/(float)LIGHTING_SAMPLE_GRID_SIZE);
-                if (LIGHTING_SAMPLE_GRID_SIZE > 1) {
-                    // Maybe this should be done regularly not randomly
-                    //x2 += ((float)rand()/(float)RAND_MAX)-0.5;
-                    //y2 += ((float)rand()/(float)RAND_MAX)-0.5;
-                }
+                x2 += 0.5/LIGHTING_SAMPLE_GRID_SIZE;
+                y2 += 0.5/LIGHTING_SAMPLE_GRID_SIZE;
                 diffuse += (l->getWorldCoord(l->getCenter(), Vector3 (x2,y2,0)) - intersect).normalize().dot(normal);
                 specular += (l->getWorldCoord(l->getCenter(), Vector3 (x2,y2,0)) - intersect).normalize().dot(reflect(ray.direction, intersect, normal).direction);
             }
@@ -179,14 +176,20 @@ sf::Color trace (Ray& ray, int recursion_depth) {
             for (unsigned int x = 0; x < SHADOW_SAMPLE_GRID_SIZE; x += 1){
                 float x2 = ((float)x/(float)SHADOW_SAMPLE_GRID_SIZE);
                 float y2 = ((float)y/(float)SHADOW_SAMPLE_GRID_SIZE);
+                x2 += 0.5/LIGHTING_SAMPLE_GRID_SIZE;
+                y2 += 0.5/LIGHTING_SAMPLE_GRID_SIZE;
                 if (SHADOW_SAMPLE_GRID_SIZE > 1) {
-                    x2 += ((float)rand()/(float)RAND_MAX)-0.5;
-                    y2 += ((float)rand()/(float)RAND_MAX)-0.5;
+                    x2 += (((float)rand()/(float)RAND_MAX)-0.5)/LIGHTING_SAMPLE_GRID_SIZE;
+                    y2 += (((float)rand()/(float)RAND_MAX)-0.5)/LIGHTING_SAMPLE_GRID_SIZE;
                 }
                 Ray shadowRay (intersect+normal.scale(0.001), (l->getWorldCoord(l->getCenter(), Vector3 (x2,y2,0))-intersect).normalize());
                 Intersect obstruction = getFirstIntersect(shadowRay);
                 if (obstruction.distance < (l->getWorldCoord(l->getCenter(), Vector3 (x2,y2,0))-intersect).magnitude()) {
-                    shadowIntensity += 1.0/(float)(SHADOW_SAMPLE_GRID_SIZE*SHADOW_SAMPLE_GRID_SIZE);
+                    if (obstruction.closest->kt > 0.0 or obstruction.closest->reflectivity > 0.0) {
+                        // Need to do something about this... more recursion?
+                    }
+                    // This cheat will do for now
+                    shadowIntensity += (1.0-(obstruction.closest->kt/4.0)-(obstruction.closest->reflectivity/4.0))/(float)(SHADOW_SAMPLE_GRID_SIZE*SHADOW_SAMPLE_GRID_SIZE);
                 }
             }
         }
@@ -262,8 +265,10 @@ int main () {
         sprite.setScale(window.getView().getSize().x / sprite.getLocalBounds().width, window.getView().getSize().y / sprite.getLocalBounds().height);
 
         float theta = frame*((2.0*M_PI)/400.0);
-        Vector3 cameraRot (0,-theta,0);
-        Vector3 cameraPos (150.0*sin(theta), 0.0, 150.0*-cos(theta));
+        Vector3 cameraRot ((M_PI/16.0)*cos(theta),-theta,(M_PI/16.0)*sin(theta));
+        Vector3 cameraPos (150.0*sin(theta), 30.0, 150.0*-cos(theta));
+        //Vector3 cameraRot (M_PI/2.0, 0.0, 0.0);
+        //Vector3 cameraPos (0.0, 90.0, 0.0);
 
         for(int y = 0; y < HEIGHT; y++) {
             for(int x = 0; x < WIDTH; x++) {
