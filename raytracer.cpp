@@ -311,9 +311,20 @@ int main () {
             }
         }
 
-	    texture.update(pixels);
+	texture.update(pixels);
         window.draw(sprite);
       	window.display();
+	    
+	char buffer[32];
+        sprintf(buffer, "SCREENSHOTS/%06d.png", frame);
+        std::string filename = buffer;
+        std::size_t length = filename.copy(buffer, 6, 13);
+        texture.copyToImage().saveToFile(filename);
+        // Create video with ffmpeg -r 30 -i SCREENSHOTS/%06d.png -vcodec libx264 -y movie.mp4
+
+        if (frame == 400) {
+            break;
+        }
 
         frame += 1;
     }
